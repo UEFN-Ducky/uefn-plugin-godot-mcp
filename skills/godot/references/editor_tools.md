@@ -52,7 +52,16 @@ The addon starts in Vibe Coding mode so it does not steal the person's focus:
 
 `get_editor_screenshot {format:"png", save_path:"user://shot.png"}` (needs a windowed
 editor) and `get_runtime_screenshot` save a file; `godot_call` returns it under
-`images` as a real path so the chat shows it.
+`images` as a real path so the chat shows it. `user://` lands in Godot's AppData folder,
+which `view_image` cannot open: to look at a shot yourself, save it under `res://`
+(e.g. `res://shots/run.png`) and delete the folder when done.
+
+## Driving a running game
+
+Key input: `simulate_runtime_input_event {event:{type:"key", physical_keycode:87, pressed:true}}`
+(87 = W; send `pressed:false` to release). Read state with `evaluate_runtime_expression
+{expression:"[score, get_tree().get_nodes_in_group('enemies').size()]", node_path:"/root/main"}`
+and wait for outcomes with `await_runtime_condition {expression, timeout_ms}`.
 
 ## Escape hatch
 

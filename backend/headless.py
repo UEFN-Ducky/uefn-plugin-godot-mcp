@@ -54,6 +54,33 @@ def autoload_names(root: Path) -> set[str]:
     return names
 
 
+_CLASS_NAME_RE = re.compile(r"^class_name\s+(\w+)", re.MULTILINE)
+_CACHED_CLASS_RE = re.compile(r'"class":\s*&"(\w+)"')
+
+
+def stale_class_cache(root: Path, scripts: list[str] | None = None) -> bool:
+    """True when a script declares a ``class_name`` Godot's global class cache lacks.
+
+    ``--check-only`` resolves global classes from ``.godot/global_script_class_cache.cfg``,
+    which only an editor scan or an import writes: a class added since then reads as
+    "Identifier not found" in every script that uses it."""
+    cache = root / ".godot" / "global_script_class_cache.cfg"
+    try:
+        known = set(_CACHED_CLASS_RE.findall(cache.read_text(encoding="utf-8")))
+    except OSError:
+        return True
+    for res_path in scripts if scripts is not None else project_scripts(root):
+        if not res_path.endswith(".gd"):
+            continue
+        try:
+            text = (root / res_path[len("res://"):]).read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if any(name not in known for name in _CLASS_NAME_RE.findall(text)):
+            return True
+    return False
+
+
 def parse_errors(output: str, autoloads: set[str] = frozenset()) -> list[dict[str, Any]]:
     """``SCRIPT ERROR: Parse Error: …`` + its ``at: … (res://x.gd:4)`` line → rows."""
     rows: list[dict[str, Any]] = []
@@ -94,7 +121,7 @@ def validate_scripts(
 ) -> dict[str, Any]:
     """Compile each GDScript with ``--check-only`` (real errors fail, autoload misses only
     warn) and every ``.gdshader`` in one engine run."""
-    if not (root / ".godot").is_dir():
+    if not (root / ".godot").is_dir() or stale_class_cache(root):
         import_project(engine, root)
     autoloads = autoload_names(root)
     shaders = [s for s in scripts if s.endswith((".gdshader", ".gdshaderinc"))]

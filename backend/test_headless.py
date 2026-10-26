@@ -78,6 +78,23 @@ def test_shaders_and_scripts_validate_together(tmp_path, monkeypatch):
     assert not (tmp_path / "check_shaders.gd").exists()
 
 
+def test_new_class_name_triggers_import_first(tmp_path, monkeypatch):
+    (tmp_path / "project.godot").write_text("", encoding="utf-8")
+    (tmp_path / ".godot").mkdir()
+    cache = tmp_path / ".godot" / "global_script_class_cache.cfg"
+    cache.write_text('list=[{\n"base": &"Node",\n"class": &"Player",\n"path": "res://player.gd"\n}]\n', encoding="utf-8")
+    (tmp_path / "player.gd").write_text("class_name Player\nextends Node\n", encoding="utf-8")
+    assert not headless.stale_class_cache(tmp_path)
+    (tmp_path / "wolf.gd").write_text("class_name Wolf\nextends Node\n", encoding="utf-8")
+    assert headless.stale_class_cache(tmp_path)
+
+    imported = []
+    monkeypatch.setattr(headless, "import_project", lambda eng, root: imported.append(root) or {"ok": True})
+    monkeypatch.setattr(headless, "run", lambda eng, root, args, timeout=0: {"ok": True, "output": ""})
+    headless.validate_scripts({"exe": "g"}, tmp_path, ["res://wolf.gd"])
+    assert imported == [tmp_path]
+
+
 def test_project_scripts_skips_engine_and_our_addon(tmp_path):
     for rel in ("player.gd", "ui/hud.gd", ".godot/x.gd", "addons/godot_mcp/a.gd", "addons/other/b.gd", "readme.md"):
         path = tmp_path / rel

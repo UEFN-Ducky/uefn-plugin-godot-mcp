@@ -1,7 +1,7 @@
 {
   "id": "godot-mcp",
   "kind": "plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "label": "GODOT MCP",
   "description": "Control the Godot 4 editor from Ducky: scenes, nodes, scripts, debugging and 155 editor tools through a bundled open-source addon, plus headless script checks, exports and the full class reference offline.",
   "min_app_version": "1.2.357",
