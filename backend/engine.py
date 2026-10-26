@@ -21,14 +21,17 @@ _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 def state_dir() -> Path:
-    """The plugin's own folder on this PC (engine, token, API cache)."""
-    try:
-        from backend.uefn_plugins.store import appdata_uefn_plugins_dir
+    """The plugin's data folder on this PC (engine, token, sessions, logs, screenshots).
 
-        root = appdata_uefn_plugins_dir() / PLUGIN_ID
+    Never the install folder: an editor Ducky started keeps its log open there, so Windows
+    refused the Store's folder swap on update, and an update would wipe the token."""
+    try:
+        from backend.uefn_plugins.panel_presence import plugin_local_dir
+
+        root = plugin_local_dir(PLUGIN_ID)
     except Exception:
         local = os.environ.get("LOCALAPPDATA") or os.environ.get("HOME") or "."
-        root = Path(local) / "UEFN-Ducky" / "uefn_plugins" / PLUGIN_ID
+        root = Path(local) / "UEFN-Ducky" / "plugin_local" / PLUGIN_ID
     root.mkdir(parents=True, exist_ok=True)
     return root
 

@@ -8,6 +8,8 @@ import pytest
 
 from backend import engine
 
+_REAL_STATE_DIR = engine.state_dir
+
 
 @pytest.fixture(autouse=True)
 def _isolated(tmp_path, monkeypatch):
@@ -20,6 +22,13 @@ def _isolated(tmp_path, monkeypatch):
     monkeypatch.setenv("ProgramFiles(x86)", str(tmp_path / "pf86"))
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
     monkeypatch.setattr(engine.Path, "home", classmethod(lambda cls: tmp_path / "home"))
+
+
+def test_state_dir_is_never_the_install_folder(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    path = _REAL_STATE_DIR()
+    assert path.parts[-2:] == ("plugin_local", "godot-mcp")
+    assert "uefn_plugins" not in path.parts
 
 
 def test_parse_version():
