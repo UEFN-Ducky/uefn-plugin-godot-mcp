@@ -187,8 +187,8 @@ def publish(zip_path: Path, *, category: str, changelog: str) -> None:
         "publish": True,
         "name": label,
         "slug": pid,
-        "categories": ["plugins", "mcps"],
-        "tags": ["godot", "mcp", "gdscript", "editor"],
+        "categories": ["plugins", "mcps", "skills"],
+        "tags": ["godot", "gdscript", "mcp", "editor", "game-engine", "offline"],
     }
     print(f"releasing via uds_release (uploadId={upload_id})…")
     result = mcp_call(base, key, "uds_release", release_args)
