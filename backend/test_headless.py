@@ -33,6 +33,7 @@ def test_autoload_miss_is_flagged_not_failed():
 def test_validate_scripts_uses_engine_output(tmp_path, monkeypatch):
     (tmp_path / "project.godot").write_text('[autoload]\n\nGame="*res://game.gd"\n', encoding="utf-8")
     (tmp_path / ".godot").mkdir()
+    (tmp_path / ".godot" / "global_script_class_cache.cfg").write_text("list=[]\n", encoding="utf-8")
     outputs = {"res://broken.gd": BROKEN, "res://auto.gd": AUTOLOAD, "res://good.gd": ""}
     monkeypatch.setattr(headless, "run", lambda eng, root, args, timeout=0: {"ok": True, "output": outputs[args[-1]]})
     res = headless.validate_scripts({"exe": "godot"}, tmp_path, ["res://good.gd", "auto.gd", "res://broken.gd"])
