@@ -1,0 +1,9 @@
+deploy/
+.pytest_cache/
+__pycache__/
+*.pyc
+.env
+*.dat
+
+# Agent / local scratch dirs (never commit)
+.tmp-*
