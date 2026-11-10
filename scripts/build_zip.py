@@ -93,9 +93,17 @@ def _find_ducky_repo() -> Path:
     env = os.environ.get("DUCKY_REPO", "").strip()
     if env:
         candidates.append(Path(env))
-    github = ROOT.parent.parent  # .../GitHub (this repo lives under uefn-plugins/)
-    for name in ("UEFN-Ducky-Release", "UEFN-Ducky"):
-        candidates.append(github / name)
+    roots = [ROOT]
+    # A sandbox worktree lives outside GitHub/: its main checkout (the git common dir's
+    # parent) still sits under GitHub/uefn-plugins/.
+    common = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                            cwd=str(ROOT), capture_output=True, text=True, check=False)
+    if common.returncode == 0 and common.stdout.strip():
+        roots.append(Path(common.stdout.strip()).parent)
+    for root in roots:
+        github = root.parent.parent  # .../GitHub (this repo lives under uefn-plugins/)
+        for name in ("UEFN-Ducky-Release", "UEFN-Ducky"):
+            candidates.append(github / name)
     for cand in candidates:
         if (cand / "ducky_app" / "backend" / "uefn_plugins" / "compile.py").is_file():
             return cand
@@ -127,6 +135,9 @@ def build_compiled_zip(*, out: Path | None = None, release: bool = False) -> Pat
     ducky_app = repo / "ducky_app"
     env = dict(os.environ)
     env["PYTHONPATH"] = str(ducky_app) + os.pathsep + env.get("PYTHONPATH", "")
+    # One C compiler per core ran an agent terminal out of memory (LLVM ERROR: out of memory):
+    # two at a time in Nuitka's low-memory mode fits; DUCKY_NUITKA_JOBS overrides.
+    env.setdefault("DUCKY_NUITKA_JOBS", "2")
     cmd = [_ducky_python(repo), "-m", "backend.uefn_plugins.compile", str(ROOT), str(dest)]
     if release:
         cmd.append("--release")
