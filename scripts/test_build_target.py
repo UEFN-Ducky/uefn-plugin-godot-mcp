@@ -44,7 +44,32 @@ def test_check_zip_target() -> None:
             assert _refused(bz.check_zip_target, z, target) is not ok, (abi, target)
 
 
+def test_zip_names() -> None:
+    # release_platforms looks for deploy/*-<target>-compiled.ducky-plugin.zip; Windows stays as it was.
+    assert bz.compiled_zip_name("p", "1.2.3", "linux-x86_64") == "p-1.2.3-linux-x86_64-compiled.ducky-plugin.zip"
+    assert bz.compiled_zip_name("p", "1.2.3", "linux-arm64") == "p-1.2.3-linux-arm64-compiled.ducky-plugin.zip"
+    assert bz.compiled_zip_name("p", "1.2.3") == "p-1.2.3-compiled.ducky-plugin.zip"
+
+
+def test_linux_build_prunes_only_its_own_target() -> None:
+    names = ["p-1-compiled", "p-0-linux-x86_64-compiled", "p-1-linux-x86_64-compiled", "p-1-linux-arm64-compiled"]
+    old = bz.OUT_DIR
+    with tempfile.TemporaryDirectory() as td:
+        bz.OUT_DIR = Path(td)
+        try:
+            for n in names:
+                (bz.OUT_DIR / f"{n}.ducky-plugin.zip").write_bytes(b"z")
+            keep = bz.OUT_DIR / "p-1-linux-x86_64-compiled.ducky-plugin.zip"
+            bz._prune_superseded_zips(keep, "*-linux-x86_64-compiled.ducky-plugin.zip")
+            left = sorted(p.name for p in bz.OUT_DIR.iterdir())
+        finally:
+            bz.OUT_DIR = old
+    assert left == sorted(f"{n}.ducky-plugin.zip" for n in names if n != "p-0-linux-x86_64-compiled"), left
+
+
 if __name__ == "__main__":
     test_check_target()
     test_check_zip_target()
+    test_zip_names()
+    test_linux_build_prunes_only_its_own_target()
     print("ok")

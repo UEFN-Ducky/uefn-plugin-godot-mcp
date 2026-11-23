@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "deploy"
 
 
-def _prune_superseded_zips(keep: pathlib.Path | None = None) -> None:
+def _prune_superseded_zips(keep: pathlib.Path | None = None, pattern: str = "*.ducky-plugin.zip") -> None:
     """Delete every built zip except the one just built.
 
     deploy/ is gitignored build output; superseded zips are stale files that
@@ -27,7 +27,7 @@ def _prune_superseded_zips(keep: pathlib.Path | None = None) -> None:
     script. Keeping them only invites installing an old build by mistake.
     """
     try:
-        zips = sorted(OUT_DIR.glob("*.ducky-plugin.zip"))
+        zips = sorted(OUT_DIR.glob(pattern))
     except OSError:
         return
     survivor = keep
@@ -154,6 +154,12 @@ def check_zip_target(zip_path: Path, target: str) -> str:
     return abi
 
 
+def compiled_zip_name(pid: str, version: object, target: str = "") -> str:
+    """The name release_platforms looks for: ``<id>-<ver>-compiled`` (Windows), ``<id>-<ver>-<target>-compiled``."""
+    tag = f"-{target}" if target else ""
+    return f"{pid}-{version}{tag}-compiled.ducky-plugin.zip"
+
+
 def build_compiled_zip(*, out: Path | None = None, release: bool = False, target: str = "") -> Path:
     """Build a compiled Store zip by invoking the Ducky build engine CLI.
 
@@ -168,10 +174,7 @@ def build_compiled_zip(*, out: Path | None = None, release: bool = False, target
     if target:
         check_target(target)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    if target:
-        dest = out or (OUT_DIR / f"{pid}-{version}-{target}.ducky-plugin.zip")
-    else:
-        dest = out or (OUT_DIR / f"{pid}-{version}-compiled.ducky-plugin.zip")
+    dest = out or (OUT_DIR / compiled_zip_name(pid, version, target))
     repo = _find_ducky_repo()
     ducky_app = repo / "ducky_app"
     env = dict(os.environ)
@@ -187,7 +190,8 @@ def build_compiled_zip(*, out: Path | None = None, release: bool = False, target
     if target:
         print(f"python_abi {check_zip_target(dest, target)}")
     print(f"wrote {dest} ({dest.stat().st_size} bytes)")
-    _prune_superseded_zips(dest)
+    # A Linux build prunes only its own target's zips (the Windows one and the other CPU stay).
+    _prune_superseded_zips(dest, f"*-{target}-compiled.ducky-plugin.zip" if target else "*.ducky-plugin.zip")
     return dest
 
 
