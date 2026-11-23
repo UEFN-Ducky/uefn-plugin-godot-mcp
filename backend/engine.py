@@ -14,7 +14,15 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from .constants import ENGINE_SHA512, ENGINE_URL, ENGINE_VERSION, ENGINE_ZIP, PLUGIN_ID
+from .constants import (
+    ENGINE_BASE_URL,
+    ENGINE_LINUX,
+    ENGINE_SHA512,
+    ENGINE_URL,
+    ENGINE_VERSION,
+    ENGINE_ZIP,
+    PLUGIN_ID,
+)
 
 _VERSION_RE = re.compile(r"^(\d+)\.(\d+)(?:\.(\d+))?\.(\w+)")
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -192,13 +200,56 @@ def install_zip(archive: Path, *, expected_sha512: str = ENGINE_SHA512) -> dict[
             if dest.resolve() not in target.parents and target != dest.resolve():
                 return {"ok": False, "error": f"unsafe path in engine zip: {member}"}
         zf.extractall(dest)
+    if sys.platform != "win32":  # zip keeps no exec bit: the Linux binary has to be made runnable
+        for name in zf.namelist():
+            path = dest / name
+            if path.is_file() and Path(name).name.startswith("Godot"):
+                path.chmod(path.stat().st_mode | 0o755)
     return find_godot(str(next(iter(_godot_exes_in(dest)), "")))
+
+
+_LINUX_ARCH = {"x86_64": "x86_64", "amd64": "x86_64", "aarch64": "aarch64", "arm64": "aarch64"}
+
+
+def linux_asset(machine: str | None = None) -> tuple[str, str, str] | None:
+    """(zip, url, sha512) of the pinned Linux build for this CPU; None when Godot ships none for it."""
+    import platform
+
+    arch = _LINUX_ARCH.get(str(machine if machine is not None else platform.machine()).lower())
+    if arch is None:
+        return None
+    name, sha = ENGINE_LINUX[arch]
+    return name, ENGINE_BASE_URL + name, sha
+
+
+def _fetch_linux_engine() -> dict[str, Any]:
+    import platform
+
+    asset = linux_asset()
+    if asset is None:
+        return {"ok": False, "error": f"no official Godot build for this CPU ({platform.machine()}); "
+                "install Godot and pass godot_path"}
+    name, url, sha = asset
+    have = _godot_exes_in(engine_dir() / ENGINE_VERSION)
+    if have:
+        return find_godot(str(have[0]))
+    archive = engine_dir() / name
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    req = urllib.request.Request(url, headers={"User-Agent": "UEFN-Ducky-GODOT-MCP/0.1"})
+    try:
+        with urllib.request.urlopen(req, timeout=600) as resp, archive.open("wb") as fh:
+            shutil.copyfileobj(resp, fh, 1 << 20)
+        return install_zip(archive, expected_sha512=sha)
+    finally:
+        archive.unlink(missing_ok=True)  # a bad download (checksum mismatch) never stays behind
 
 
 def fetch_engine() -> dict[str, Any]:
     """Download the pinned Godot build once (only when a person asks), then use it offline."""
+    if sys.platform.startswith("linux"):
+        return _fetch_linux_engine()
     if sys.platform != "win32":
-        return {"ok": False, "error": "auto download is Windows-only; install Godot and pass godot_path"}
+        return {"ok": False, "error": "auto download is Windows and Linux only; install Godot and pass godot_path"}
     have = _godot_exes_in(engine_dir() / ENGINE_VERSION)
     if have:
         return find_godot(str(have[0]))

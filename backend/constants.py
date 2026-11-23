@@ -24,6 +24,20 @@ ENGINE_SHA512 = (
     "83decd58fdf67b9d657958a1ae6bf1929c20785315a81effe245874cdc57acb7"
     "09bf868e00778a96984338c1b29dafdb453c6847747694621c6ecf5da2259993"
 )
+# Linux builds of the same version, by CPU: (zip name, sha512 from the release's SHA512-SUMS.txt).
+ENGINE_BASE_URL = f"https://github.com/godotengine/godot-builds/releases/download/{ENGINE_VERSION}-stable/"
+ENGINE_LINUX = {
+    "x86_64": (
+        f"Godot_v{ENGINE_VERSION}-stable_linux.x86_64.zip",
+        "9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b14"
+        "67edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65",
+    ),
+    "aarch64": (
+        f"Godot_v{ENGINE_VERSION}-stable_linux.arm64.zip",
+        "dd59918da086bd49bde2f5450b5e567ff8650cbde9abbd7b8f4ca1197ff8c609"
+        "baa38834666d032deafb47099078d7822279e2a0e06e5665745468f26533e7e2",
+    ),
+}
 
 PROBE_TIMEOUT_S = 0.5
 CONNECT_TIMEOUT_S = 12.0
