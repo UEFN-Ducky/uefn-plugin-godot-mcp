@@ -61,7 +61,8 @@ def user_dir(root: Path) -> Path:
     if _setting(root, "application/config/use_custom_user_dir") == "true":
         custom = _setting(root, "application/config/custom_user_dir_name")
         return base / (custom or project_name(root))
-    return base / "Godot" / "app_userdata" / (project_name(root) or "[unnamed project]")
+    godot = "godot" if sys.platform.startswith("linux") else "Godot"  # Linux: ~/.local/share/godot
+    return base / godot / "app_userdata" / (project_name(root) or "[unnamed project]")
 
 
 def resolve_path(root: Path, godot_path: str) -> Path | None:

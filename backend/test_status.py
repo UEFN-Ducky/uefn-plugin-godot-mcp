@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -83,7 +84,9 @@ def test_images_are_saved_as_files(tmp_path):
 def test_saved_screenshots_resolve_to_files(tmp_path, monkeypatch):
     root = _project(tmp_path)
     monkeypatch.setenv("APPDATA", str(tmp_path / "roaming"))
-    shot = tmp_path / "roaming" / "Godot" / "app_userdata" / "Game" / "shot.png"
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "roaming"))
+    godot = "godot" if sys.platform.startswith("linux") else "Godot"
+    shot = tmp_path / "roaming" / godot / "app_userdata" / "Game" / "shot.png"
     shot.parent.mkdir(parents=True)
     shot.write_bytes(b"png")
     (root / "shots").mkdir()
