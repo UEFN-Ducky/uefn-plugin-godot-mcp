@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -207,8 +208,11 @@ def export_presets(root: Path) -> list[dict[str, Any]]:
 
 
 def templates_dir(version: dict[str, Any]) -> Path:
-    appdata = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
     tag = f"{version['major']}.{version['minor']}" + (f".{version['patch']}" if version["patch"] else "")
+    if sys.platform.startswith("linux"):  # Godot's Linux data dir: $XDG_DATA_HOME/godot (lowercase)
+        data = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
+        return data / "godot" / "export_templates" / f"{tag}.{version['status']}"
+    appdata = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
     return appdata / "Godot" / "export_templates" / f"{tag}.{version['status']}"
 
 

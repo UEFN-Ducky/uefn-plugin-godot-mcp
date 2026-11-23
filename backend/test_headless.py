@@ -117,3 +117,13 @@ def test_export_presets_and_missing_templates(tmp_path, monkeypatch):
     out = headless.export(eng, tmp_path, "Windows Desktop", "build/game.exe")
     assert not out["ok"] and out["folder"].endswith("4.7.2.stable")
     assert headless.export(eng, tmp_path, "Nope", "x")["presets"] == ["Windows Desktop"]
+
+
+def test_templates_dir_per_os(tmp_path, monkeypatch):
+    ver = {"major": 4, "minor": 7, "patch": 2, "status": "stable"}
+    monkeypatch.setenv("APPDATA", str(tmp_path / "roaming"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "share"))
+    monkeypatch.setattr(headless.sys, "platform", "win32")
+    assert headless.templates_dir(ver) == tmp_path / "roaming" / "Godot" / "export_templates" / "4.7.2.stable"
+    monkeypatch.setattr(headless.sys, "platform", "linux")
+    assert headless.templates_dir(ver) == tmp_path / "share" / "godot" / "export_templates" / "4.7.2.stable"
