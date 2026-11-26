@@ -93,6 +93,14 @@ def _godot_exes_in(folder: Path) -> list[Path]:
     return sorted(newest, key=lambda p: "mono" in p.name.lower())
 
 
+def mac_app_exes(roots: list[Path]) -> list[Path]:
+    """macOS: ``Godot*.app/Contents/MacOS/Godot`` in these folders, newest name first, .NET last."""
+    found = [app / "Contents" / "MacOS" / "Godot" for root in roots if root.is_dir()
+             for app in root.glob("Godot*.app")]
+    found = sorted((p for p in found if p.is_file()), key=lambda p: p.parents[2].name, reverse=True)
+    return sorted(found, key=lambda p: "mono" in p.parents[2].name.lower())
+
+
 def candidates(explicit: str = "") -> list[Path]:
     """Every place a Godot exe may be, best first. Paths need not exist."""
     out: list[Path] = []
@@ -105,6 +113,8 @@ def candidates(explicit: str = "") -> list[Path]:
             out.append(Path(hit))
     out += _godot_exes_in(engine_dir())
     home = Path.home()
+    if sys.platform == "darwin":  # godotengine.org download or `brew install --cask godot`
+        out += mac_app_exes([Path("/Applications"), home / "Applications"])
     roots = [
         Path(os.environ.get("ProgramFiles", r"C:\Program Files")),
         Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")),
@@ -249,7 +259,10 @@ def fetch_engine() -> dict[str, Any]:
     if sys.platform.startswith("linux"):
         return _fetch_linux_engine()
     if sys.platform != "win32":
-        return {"ok": False, "error": "auto download is Windows and Linux only; install Godot and pass godot_path"}
+        # ponytail: no pinned macOS build yet; add Godot_v<ver>-stable_macos.universal.zip + its sha512
+        # (unpacked with ditto to keep the app's signature) when Mac users ask for one-click Godot.
+        return {"ok": False, "error": "auto download is Windows and Linux only; install Godot.app "
+                "(godotengine.org or `brew install --cask godot`) or pass godot_path"}
     have = _godot_exes_in(engine_dir() / ENGINE_VERSION)
     if have:
         return find_godot(str(have[0]))

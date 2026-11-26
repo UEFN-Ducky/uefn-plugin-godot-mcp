@@ -31,6 +31,19 @@ def test_state_dir_is_never_the_install_folder(tmp_path, monkeypatch):
     assert "uefn_plugins" not in path.parts
 
 
+def test_mac_finds_godot_app_bundles(tmp_path, monkeypatch):
+    """macOS: Godot.app in /Applications or ~/Applications; .NET builds after the standard ones."""
+    apps = tmp_path / "Applications"
+    std = _exe(apps / "Godot.app" / "Contents" / "MacOS", "Godot")
+    mono = _exe(apps / "Godot_mono.app" / "Contents" / "MacOS", "Godot")
+    (apps / "Godot_broken.app").mkdir()
+    assert engine.mac_app_exes([apps, tmp_path / "missing"]) == [std, mono]
+    monkeypatch.setattr(engine.sys, "platform", "darwin")
+    user = _exe(tmp_path / "home" / "Applications" / "Godot 4.7.app" / "Contents" / "MacOS", "Godot")
+    assert user in engine.candidates()
+    assert "brew install --cask godot" in engine.fetch_engine()["error"]
+
+
 def test_parse_version():
     v = engine.parse_version("Godot Engine\n4.7.2.stable.official.ed1daf0bf\n")
     assert v == {"major": 4, "minor": 7, "patch": 2, "status": "stable", "text": "4.7.2.stable.official.ed1daf0bf"}
